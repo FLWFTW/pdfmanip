@@ -1,20 +1,21 @@
-#ifndef __PDFFT_H__
-#define __PDFFT_H__
+#ifndef __PDFMANIP_H__
+#define __PDFMANIP_H__
 
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
 #include <stdbool.h>
+#include <stdint.h>
+#include <inttypes.h>
 #include "list.h"
 #include "utils.h"
-
-extern char *pdfm_error_message[];
-extern int   pdfm_error_code;
+#include "error.h"
 
 typedef struct s_pdfmanip pdfm;
 typedef struct s_pdfmanip_object pdfm_o;
-typedef enum   e_pdfmanip_otype pdfm_otype;
+
+pdfm_error pdfm_error_code;
 
 #define WSP_NL    0x00
 #define WSP_HT    0x09
@@ -34,30 +35,28 @@ typedef enum   e_pdfmanip_otype pdfm_otype;
 #define DLM_SD    0x2F
 #define DLM_PC    0x25
 
-enum e_pdfmanip_otype { pdf_boolean = 0, pdf_integer, pdf_real, pdf_string, pdf_name, pdf_array, pdf_dictionary, pdf_stream, pdf_null };
-
 struct s_pdfmanip
 {
     int          version_major;
     int          version_minor;
     char       * version_string;
 
-    size_t       size;
+    uint64_t     size;
     FILE       * fp;
     
     char       * filename;
     char       * raw_data;
     LIST       * objects;
-    size_t       xref_location;
-    size_t       xref_count;
+    uint64_t     xref_location;
+    uint64_t     xref_count;
 };
 
 struct s_pdfmanip_object
 {
-   unsigned int object_number;
-   unsigned int generation_number;
+   uint64_t     object_number;
+   uint64_t     generation_number;
 
-   size_t       offset;
+   uint64_t     offset;
    char         status;
 
    LIST         * contents;

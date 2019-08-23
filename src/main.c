@@ -18,7 +18,7 @@ int main( int numArgs, char **argList )
     AttachIterator( &Iter, pdf->objects );
     while( ( o = NextInList( &Iter ) ) != NULL )
     {
-       fprintf( stdout, "Object: %i %i\nOffset: %zu\nState: %c\n\n", o->object_number, o->generation_number, o->offset, o->status );
+       fprintf( stdout, "Object: %"PRIu64" %"PRIu64"\nOffset: %zu\nState: %c\n\n", o->object_number, o->generation_number, o->offset, o->status );
     }
     DetachIterator( &Iter );
 

@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <stdint.h>
 
 char *token( char *pch, char *tok )
 {
@@ -29,5 +30,21 @@ char *token( char *pch, char *tok )
 
   /* return the leftovers */
   return pch;
+}
+
+uint64_t strtouint64_t( char *str )
+{
+   uint64_t ret = 0;
+   while( !isdigit( *str ) )
+      str++;
+   ret = *str - '0';
+   while( isdigit( *str ) )
+   {
+      ret *= 10;
+      ret += *str - '0';
+      str++;
+   }
+
+   return ret;
 }
 

@@ -4,7 +4,7 @@ static pdfm_o *new_pdfmo();
 
 static int pdfm_getsize( pdfm *pdf )
 {
-   size_t count = 0;
+   uint64_t count = 0;
    fpos_t start;
    fgetpos( pdf->fp, &start );
    do
@@ -27,48 +27,56 @@ static void pdfm_loadversion( pdfm *pdf )
 /*
 static char *next_space( char *str )
 {
-   while( *str != '\0' && *str != '\n' && *str != '\r' && !isspace( *str ) )
+   while( *str != '\0' && !isspace( *str ) )
       str++;
    return str;
 }
 */
+
 
 static int process_raw_pdf_data( pdfm *pdf )
 {
    char *pch = pdf->raw_data;
    char *pos = pch + pdf->size;
 
-   if( pch[0] != '%' || pch[1] != 'P' || pch[2] != 'D' || pch[3] != 'F' )
-      return 2;
-   if( strcmp( pch+(pdf->size-7), "\n%%EOF\n" ) )
-      return 3;
+   if( pch[0] != '%' || pch[1] != 'P' || pch[2] != 'D' || pch[3] != 'F' ) //No pdf version number
+      return PDFM_NOVERSION;
+   if( strcmp( pch+(pdf->size-7), "\n%%EOF\n" ) ) //No EOF marker
+      return PDFM_NOEOF;
 
    while( strncmp( pos, "startxref", 9 ) ) //find the reference location of the xref table
       pos--;
 
    pos += 9;
-   pdf->xref_location = strtoul( pos, NULL, 0 );
+   pdf->xref_location = strtoull( pos, NULL, 0 );
    pos = pch + pdf->xref_location;
 
    if( strncmp( pos, "xref", 4 ) ) //xref table not found
-      return 5;
+      return PDFM_NOXREF;
 
    pos += 5;
    strtoul( pos, &pos, 0 );
-   pdf->xref_count = strtoul( pos, &pos, 0 );
+   pdf->xref_count = strtoull( pos, &pos, 0 );
 
    pdfm_o *o;
    int i;
    for( i = 0; i < pdf->xref_count; i++ )
    {
       o = new_pdfmo();
-      o->offset = strtoul( pos, &pos, 0 );
-      o->generation_number = strtoul( pos, &pos, 0 );
-      o->object_number = strtoul( pch + o->offset, NULL, 0 );
-      pos++;
+      o->offset = strtouint64_t( pos );
+      pos += 11;
+      o->generation_number = strtouint64_t( pos );
+      pos += 7;
       o->status = *pos;
-      pos++;
+      pos += 2;
       AppendToList( o, pdf->objects );
+   }
+
+   pos++;
+   if( strncmp( pos, "trailer", 7 ) )
+   {
+      fprintf( stderr, "%s", pos );
+      return PDFM_NOTRAILER;
    }
 
 
@@ -117,12 +125,12 @@ pdfm *load_pdf( char *filename )
     pdf->fp = fopen( pdf->filename, "r" );
     if( pdf->fp == NULL )
     {
-       pdfm_error_code = 5;
+       pdfm_error_code = PDFM_NOFILE;
        return NULL;
     }
     pdf->size = pdfm_getsize( pdf );
     pdf->raw_data = calloc( 1, sizeof(char) * pdf->size );
-    size_t size = 0;
+    uint64_t size = 0;
     if( pdf->size != ( size = fread( pdf->raw_data, sizeof(char), pdf->size, pdf->fp ) ) )
     {
        fprintf( stderr, "Error reading file %s. Expected %zu bytes. Read %zu bytes. Aborting.\n", pdf->filename, pdf->size, size );
