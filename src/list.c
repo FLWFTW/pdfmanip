@@ -252,6 +252,7 @@ int SizeOfList(LIST *pList)
 void *NthFromList( LIST *pList, size_t n )
 {
    void *ptr;
+   size_t i;
    if( !pList )
       return NULL;
    if( n > SizeOfList( pList ) )
@@ -259,7 +260,7 @@ void *NthFromList( LIST *pList, size_t n )
 
    ITERATOR iter;
    AttachIterator( &iter, pList );
-   for( int i = 0; i <= n; i++ )
+   for( i = 0; i <= n; i++ )
    {
       ptr = NextInList( &iter );
    }

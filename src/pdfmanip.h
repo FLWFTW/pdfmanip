@@ -9,9 +9,12 @@
 #include "list.h"
 #include "utils.h"
 
-typedef struct s_pdfft pdfft;
-typedef struct s_pdfft_indirect_object pdfft_io;
-typedef struct e_pdf_otype pdfft_otype;
+extern char *pdfm_error_message[];
+extern int   pdfm_error_code;
+
+typedef struct s_pdfmanip pdfm;
+typedef struct s_pdfmanip_object pdfm_o;
+typedef enum   e_pdfmanip_otype pdfm_otype;
 
 #define WSP_NL    0x00
 #define WSP_HT    0x09
@@ -31,9 +34,9 @@ typedef struct e_pdf_otype pdfft_otype;
 #define DLM_SD    0x2F
 #define DLM_PC    0x25
 
-enum e_pdfft_otype { pdf_boolean = 0, pdf_integer, pdf_real, pdf_string, pdf_name, pdf_array, pdf_dictionary, pdf_stream, pdf_null };
+enum e_pdfmanip_otype { pdf_boolean = 0, pdf_integer, pdf_real, pdf_string, pdf_name, pdf_array, pdf_dictionary, pdf_stream, pdf_null };
 
-struct s_pdfft
+struct s_pdfmanip
 {
     int          version_major;
     int          version_minor;
@@ -45,16 +48,21 @@ struct s_pdfft
     char       * filename;
     char       * raw_data;
     LIST       * objects;
+    size_t       xref_location;
+    size_t       xref_count;
 };
 
-struct s_pdfft_object
+struct s_pdfmanip_object
 {
    unsigned int object_number;
    unsigned int generation_number;
 
+   size_t       offset;
+   char         status;
+
    LIST         * contents;
 };
 
-pdfft *load_pdf( char *filename );
-void   free_pdf( pdfft *pdf );
+pdfm *load_pdf( char *filename );
+void   free_pdf( pdfm *pdf );
 #endif

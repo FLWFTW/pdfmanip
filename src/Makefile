@@ -1,13 +1,13 @@
 CC   = gcc
 NAME = pdfmanip
 
-W_FLAGS = -Wall -Werror -Wshadow -Wformat-security -Wimplicit-function-declaration -Wpointer-arith -Wcast-align -Wredundant-decls  -pedantic
+W_FLAGS = -Wall -Werror -Wshadow -Wformat-security -Wpointer-arith -Wcast-align -Wredundant-decls
 
 C_FLAGS = -g3 $(W_FLAGS) $(INCLUDES)
 L_FLAGS = -lz -lm
 D_FLAGS = -ggdb $(W_FLAGS)
 
-O_FILES = pdfmanip.o main.o list.o utils.o
+O_FILES = pdfmanip.o main.o list.o utils.o error.o
 
 all: $(O_FILES)
 	rm -f $(NAME)
