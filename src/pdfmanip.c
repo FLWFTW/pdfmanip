@@ -33,6 +33,58 @@ static char *next_space( char *str )
 }
 */
 
+static char *skip_spaces( char *str )
+{
+   while( isspace( *str ) )
+      str++;
+   return str;
+}
+
+static char *skip_whitespace( char *str )
+{
+   while( *str == 0x00 || isspace( *str ) || *str == '\n' || *str == '\r' )
+      str++;
+   return str;
+}
+
+/*
+static pdfm_o *load_object( char *str )
+{
+  pdfm_o *obj = NULL;
+
+  return obj;
+}
+*/
+
+static char *read_name( char *pch )
+{
+    size_t len = 0;
+    while( !isspace( pch[len] ) )
+        len++;
+    char *name = calloc( len, sizeof( char ) );
+    memcpy( name, pch, len );
+    return name;
+}
+
+static pdfm_d *read_dictionary( char *pch )
+{
+    pdfm_d *dic = calloc( 1, sizeof( pdfm_d ) );
+    while( *pch == '<' ) //should be 2-- << [data] >>
+        pch++;
+
+    pch = skip_whitespace( pch );
+    if( *pch != '/' )
+    {
+        free( dic );
+        return NULL;
+    }
+    char *name = read_name( pch );
+    pch += strlen( name );
+    pch = skip_whitespace( pch ); //we should now be pointing at whatever's the subject of the name...
+
+
+    return dic;
+}
 
 static int process_raw_pdf_data( pdfm *pdf )
 {
@@ -41,13 +93,13 @@ static int process_raw_pdf_data( pdfm *pdf )
 
    if( pch[0] != '%' || pch[1] != 'P' || pch[2] != 'D' || pch[3] != 'F' ) //No pdf version number
       return PDFM_NOVERSION;
-   if( strcmp( pch+(pdf->size-7), "\n%%EOF\n" ) ) //No EOF marker
+   if( strcmp( pch+(pdf->size-6), "%%EOF\n" ) ) //No EOF marker
       return PDFM_NOEOF;
 
    while( strncmp( pos, "startxref", 9 ) ) //find the reference location of the xref table
       pos--;
 
-   pos += 9;
+   pos += 9;//point to after 'startxref' in the file.
    pdf->xref_location = strtoull( pos, NULL, 0 );
    pos = pch + pdf->xref_location;
 
@@ -72,12 +124,17 @@ static int process_raw_pdf_data( pdfm *pdf )
       AppendToList( o, pdf->objects );
    }
 
-   pos++;
+   pos = skip_spaces( pos );
    if( strncmp( pos, "trailer", 7 ) )
    {
       fprintf( stderr, "%s", pos );
       return PDFM_NOTRAILER;
    }
+   pos += 7; //Skip 'trailer'
+   pos = skip_whitespace( pos );//in case there are any extra spaces
+   pdfm_d *dic = read_dictionary( pos );
+   if( dic == NULL )
+       return PDFM_UNSPECIFIED;
 
 
    return 0;
@@ -120,7 +177,7 @@ void free_pdf( pdfm *pdf )
 pdfm *load_pdf( char *filename )
 {
     pdfm *pdf = new_pdf();
- 
+
     pdf->filename = strdup( filename );
     pdf->fp = fopen( pdf->filename, "r" );
     if( pdf->fp == NULL )

@@ -1,7 +1,7 @@
 CC   = gcc
 NAME = pdfmanip
 
-W_FLAGS = -Wall -Werror -Wshadow -Wformat-security -Wpointer-arith -Wcast-align -Wredundant-decls
+W_FLAGS = -Wall -Werror -Wshadow -Wformat-security -Wpointer-arith -Wcast-align -Wredundant-decls --std=c99
 
 C_FLAGS = -g3 $(W_FLAGS) $(INCLUDES)
 L_FLAGS = -lz -lm

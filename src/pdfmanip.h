@@ -14,6 +14,7 @@
 
 typedef struct s_pdfmanip pdfm;
 typedef struct s_pdfmanip_object pdfm_o;
+typedef struct s_pdfmanip_dictionary pdfm_d;
 
 pdfm_error pdfm_error_code;
 
@@ -40,26 +41,36 @@ struct s_pdfmanip
     int          version_major;
     int          version_minor;
     char       * version_string;
-
-    uint64_t     size;
-    FILE       * fp;
-    
     char       * filename;
     char       * raw_data;
-    LIST       * objects;
+    uint64_t     size;
     uint64_t     xref_location;
     uint64_t     xref_count;
+    FILE       * fp;
+    LIST       * objects;
+    pdfm_o     * trailer;
+};
+
+struct s_pdfmanip_content
+{
+    int          type;
+    void       * content;
+};
+
+struct s_pdfmanip_dictionary
+{
+    uint64_t     hash;
+    char       * label;
+    char       * content;
 };
 
 struct s_pdfmanip_object
 {
-   uint64_t     object_number;
-   uint64_t     generation_number;
-
-   uint64_t     offset;
-   char         status;
-
-   LIST         * contents;
+   uint64_t      object_number;
+   uint64_t      generation_number;
+   uint64_t      offset;
+   char          status;
+   LIST        * contents;
 };
 
 pdfm *load_pdf( char *filename );
