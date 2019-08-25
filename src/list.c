@@ -43,49 +43,15 @@ CELL *AllocCell()
 {
   CELL *pCell;
 
-  pCell = malloc(sizeof(*pCell));
-  pCell->_pNextCell = NULL;
-  pCell->_pPrevCell = NULL;
-  pCell->_pContent = NULL;
+  pCell = calloc( 1, sizeof(*pCell) );
   pCell->_valid = 1;
 
   return pCell;
 }
 
-void AppendToList( void *pContent, LIST *pList )
-{
-   CELL *pCell = NULL;
-
-   for (pCell = pList->_pFirstCell; pCell != NULL; pCell = pCell->_pNextCell)
-   {
-      if (pCell && !pCell->_valid)
-      continue;
-
-      if (pCell->_pContent == pContent)
-      {
-         //Do not attach if its already in the list
-         return;
-      }
-   }
-
-   pCell = AllocCell();
-   pCell->_pContent = pContent;
-   pCell->_pPrevCell = pList->_pLastCell;
-   if( pList->_pLastCell )
-   {
-      pList->_pLastCell->_pNextCell = pCell;
-   }
-   pList->_pLastCell = pCell;
-   if( pList->_pFirstCell == NULL )
-      pList->_pFirstCell = pCell;
-
-   pList->_size++;
-}
-
 void AttachToList(void *pContent, LIST *pList)
 {
   CELL *pCell = NULL;
-  int found = 0;
 
   for (pCell = pList->_pFirstCell; pCell != NULL; pCell = pCell->_pNextCell)
   {
@@ -94,14 +60,9 @@ void AttachToList(void *pContent, LIST *pList)
 
     if (pCell->_pContent == pContent)
     {
-      found = 1;
-      break;
+        return;
     }
   }
-
-  /* do not attach to list if already here */
-  if (found)
-    return;
 
   pCell = AllocCell();
   pCell->_pContent = pContent;
@@ -267,5 +228,95 @@ void *NthFromList( LIST *pList, size_t n )
    DetachIterator( &iter );
    
    return ptr;
+}
+
+void AttachSorted( void *pContent, LIST *pList, int (*cmp)(const void *, const void *) )
+{
+    CELL *pCell = NULL, *nCell = NULL;
+
+    for (pCell = pList->_pFirstCell; pCell != NULL; pCell = pCell->_pNextCell)
+    {
+        if (pCell && !pCell->_valid)
+            continue;
+
+        if (pCell->_pContent == pContent)
+        {
+            //Do not attach if its already in the list
+            return;
+        }
+
+        if( (*cmp)(pCell->_pContent, pContent) > 0 )
+            break;
+    }
+
+    nCell = AllocCell();
+    nCell->_pContent = pContent;
+    if( pCell )//Not inserting at the very end of the list
+    {
+        if( pList->_pFirstCell == pCell ) //We're inserting at the very beginning of the list
+        {
+            nCell->_pNextCell = pList->_pFirstCell;
+
+            if (pList->_pFirstCell != NULL)
+                pList->_pFirstCell->_pPrevCell = nCell;
+            if (pList->_pLastCell == NULL)
+                pList->_pLastCell = nCell;
+            pList->_pLastCell->_pNextCell = NULL;
+
+            pList->_pFirstCell = nCell;
+        }
+        else//Inserting somewhere in the middle of the list
+        {
+            nCell->_pPrevCell = pCell->_pPrevCell;
+            pCell->_pPrevCell = nCell;
+            nCell->_pNextCell = pCell;
+            nCell->_pPrevCell->_pNextCell = nCell;
+        }
+    }
+    else //Appending to the end of the list.
+    {
+       nCell->_pPrevCell = pList->_pLastCell;
+       if( pList->_pLastCell )
+       {
+          pList->_pLastCell->_pNextCell = nCell;
+       }
+       pList->_pLastCell = nCell;
+       if( pList->_pFirstCell == NULL )
+       {
+          pList->_pFirstCell = nCell;
+       }
+    }
+
+    pList->_size++;
+}
+
+void AppendToList( void *pContent, LIST *pList )
+{
+   CELL *pCell = NULL;
+
+   for (pCell = pList->_pFirstCell; pCell != NULL; pCell = pCell->_pNextCell)
+   {
+      if (pCell && !pCell->_valid)
+      continue;
+
+      if (pCell->_pContent == pContent)
+      {
+         //Do not attach if its already in the list
+         return;
+      }
+   }
+
+   pCell = AllocCell();
+   pCell->_pContent = pContent;
+   pCell->_pPrevCell = pList->_pLastCell;
+   if( pList->_pLastCell )
+   {
+      pList->_pLastCell->_pNextCell = pCell;
+   }
+   pList->_pLastCell = pCell;
+   if( pList->_pFirstCell == NULL )
+      pList->_pFirstCell = pCell;
+
+   pList->_size++;
 }
 

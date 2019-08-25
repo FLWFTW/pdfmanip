@@ -40,4 +40,5 @@ void  FreeList           ( LIST *pList );
 int   SizeOfList         ( LIST *pList );
 void *NthFromList        ( LIST *pList, size_t n );
 void  MergeList          ( LIST *listA, LIST *listB );
+void  AttachSorted       ( void *pContent, LIST *pList, int (*cmp)(const void *, const void *) );
 #endif

@@ -15,6 +15,8 @@
 typedef struct s_pdfmanip pdfm;
 typedef struct s_pdfmanip_object pdfm_o;
 typedef struct s_pdfmanip_dictionary pdfm_d;
+typedef struct s_pdfmanip_xref pdfm_xref;
+typedef enum   e_pdfmanip_otype pdfm_otype;
 
 pdfm_error pdfm_error_code;
 
@@ -36,6 +38,8 @@ pdfm_error pdfm_error_code;
 #define DLM_SD    0x2F
 #define DLM_PC    0x25
 
+enum e_pdfmanip_otype { PDFM_NUMBER, PDFM_IR, PDFM_NAME, PDFM_DICTIONARY, PDFM_ARRAY, PDFM_STRING, PDFM_HEXSTRING, PDFM_STREAM, PDFM_BOOLEAN, PDFM_NULL };
+
 struct s_pdfmanip
 {
     int          version_major;
@@ -48,7 +52,15 @@ struct s_pdfmanip
     uint64_t     xref_count;
     FILE       * fp;
     LIST       * objects;
-    pdfm_o     * trailer;
+    LIST       * xref_table;
+    LIST       * trailer;
+};
+
+struct s_pdfmanip_xref
+{
+    uint64_t     offset;
+    uint64_t     generation;
+    char         status;
 };
 
 struct s_pdfmanip_content
@@ -59,9 +71,10 @@ struct s_pdfmanip_content
 
 struct s_pdfmanip_dictionary
 {
+    pdfm_otype   type;
     uint64_t     hash;
     char       * label;
-    char       * content;
+    void       * content;
 };
 
 struct s_pdfmanip_object
@@ -70,6 +83,7 @@ struct s_pdfmanip_object
    uint64_t      generation_number;
    uint64_t      offset;
    char          status;
+   pdfm_otype    type;
    LIST        * contents;
 };
 
