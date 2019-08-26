@@ -3,11 +3,18 @@
 
 int main( int numArgs, char **argList )
 {
-    
-    pdfm *pdf = load_pdf( "test.pdf" );
+    pdfm *pdf = NULL;
+    if( numArgs > 1 )
+    {
+        pdf = load_pdf( argList[1] );
+    }
+    else
+    {
+        pdf = load_pdf( "test.pdf" );
+    }
     if( pdf == NULL )
     {
-       fprintf( stdout, "Error loading pdf file test.pdf. %s\n",  pdfm_error_message[pdfm_error_code] );
+       fprintf( stdout, "Error loading pdf file %s. %s\n",  argList[1], pdfm_error_message[pdfm_error_code] );
        return 1;
     }
     fprintf( stdout, "Filename: %s\nSize: %zu\nVersion: %s\nXREF Table at: %zu\n", pdf->filename, pdf->size, pdf->version_string, pdf->xref_location );
@@ -21,7 +28,7 @@ int main( int numArgs, char **argList )
         {
             case PDFM_NUMBER:
                 {
-                    fprintf( stdout, "%s: %"PRIu64" (Number)\n", dic->label, (uint64_t)dic->content );
+                    fprintf( stdout, "%s: %"PRIu64" (Number)\n", dic->label, *(uint64_t*)dic->content );
                     break;
                 }
             case PDFM_IR:
@@ -32,6 +39,11 @@ int main( int numArgs, char **argList )
             case PDFM_NAME:
                 {
                     fprintf( stdout, "%s: %s (Name)\n", dic->label, (char*)dic->content );
+                    break;
+                }
+            case PDFM_ARRAY:
+                {
+                    fprintf( stdout, "%s: %s (Array)\n", dic->label, (char*)dic->content );
                     break;
                 }
             default:

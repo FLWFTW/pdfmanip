@@ -58,11 +58,9 @@ static pdfm_o *load_object( char *str )
 
 static char *read_name( char *pch )
 {
-    size_t len = 0;
-    while( pch[len] != '\n' && pch[len] != '\r' && pch[len] != '\0' && pch[len] != '\\' && !isspace( pch[len] ) )
-        len++;
-    char *name = calloc( len, sizeof( char ) );
-    memcpy( name, pch, len );
+    size_t len = strcspn( pch+1, "\n\r\\ \t/[<(" );//pch+1 because otherwise it will return 0 returning the / at the beginning of the name
+    char *name = calloc( len+2, sizeof( char ) );//len+1 to account for the / we skipped above
+    memcpy( name, pch, len+1 );
     return name;
 }
 
@@ -71,6 +69,7 @@ static char *read_array( char *pch )
     size_t len = 0;
     while( pch[len] != ']' )
         len++;
+    len++;//get that closing ]
     char *array = calloc( len, sizeof( char ) );
     memcpy( array, pch, len );
     return array;
@@ -84,10 +83,12 @@ static LIST *read_dictionary( char *pch )
 
     pch = skip_whitespace( pch );
 
+    pdfm_d *entry;
     while( *pch != '>' && pch[1] != '>' )
     {
-        pdfm_d *entry = calloc( 1, sizeof( pdfm_d ) );
+        entry = calloc( 1, sizeof( pdfm_d ) );
         entry->label = read_name( pch );
+        pch = skip_whitespace( pch );
         pch += strlen( entry->label );
         pch = skip_whitespace( pch ); //we should now be pointing at whatever's the subject of the name...
 
@@ -121,13 +122,14 @@ static LIST *read_dictionary( char *pch )
         else if( isdigit( *pch ) )
         {
             size_t len = 0;
-            while( pch[len] != '/' && pch[len] != 'R' )
+            while( pch[len] != '/' && pch[len] != 'R' && pch[len] != '>' )
                 len++;
             if( pch[len] == '/' )//this is a number;
             {
                 uint64_t *val = calloc( 1, sizeof( uint64_t ) );
                 *val = strtouint64_t( pch );
                 entry->content = val;
+                entry->type = PDFM_NUMBER;
                 pch += len;
             }
             else //this is an indirect reference
@@ -136,6 +138,7 @@ static LIST *read_dictionary( char *pch )
                 char *ir = calloc( len, sizeof( char ) );
                 memcpy( ir, pch, len );
                 entry->content = ir;
+                entry->type = PDFM_IR;
                 pch += strlen( ir );
             }
         }
@@ -145,6 +148,7 @@ static LIST *read_dictionary( char *pch )
             abort();
         }
         AppendToList( entry, dic );
+        pch = skip_whitespace( pch );
     }
 
     return dic;
@@ -170,7 +174,13 @@ static int process_raw_pdf_data( pdfm *pdf )
 
    if( pch[0] != '%' || pch[1] != 'P' || pch[2] != 'D' || pch[3] != 'F' ) //No pdf version number
       return PDFM_NOVERSION;
-   if( strcmp( pch+(pdf->size-6), "%%EOF\n" ) ) //No EOF marker
+   size_t i = 0;
+   for( i = pdf->size; i > 0; i-- )
+   {
+       if( !strncmp( pch + i, "%%EOF", 5 ) )
+           break;
+   }
+   if( i == 0 ) //No EOF marker
       return PDFM_NOEOF;
 
    while( strncmp( pos, "startxref", 9 ) ) //find the reference location of the xref table
@@ -188,7 +198,6 @@ static int process_raw_pdf_data( pdfm *pdf )
    pdf->xref_count = strtoull( pos, &pos, 0 );
 
    pdfm_xref *xref;
-   int i;
    for( i = 0; i < pdf->xref_count; i++ )
    {
        xref = calloc( 1, sizeof( pdfm_xref ) );
