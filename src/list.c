@@ -205,6 +205,20 @@ void *NextInList(ITERATOR *pIter)
   return pContent;
 }
 
+void *peekNextInList( ITERATOR *iter )
+{
+    void *pContent = NULL;
+    ITERATOR *pIter = iter;
+    while( pIter->_pCell != NULL && !pIter->_pCell->_valid )
+        pIter->_pCell = pIter->_pCell->_pNextCell;
+
+    if( pIter->_pCell != NULL )
+    {
+        pContent = pIter->_pCell->_pContent;
+    }
+        return pContent;
+}
+
 int SizeOfList(LIST *pList)
 {
   return pList->_size;

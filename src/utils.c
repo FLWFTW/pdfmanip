@@ -36,15 +36,3 @@ char *strdup( char *orig )
     return ret;
 }
 
-/*copied from http://www.cse.yorku.ca/~oz/hash.html*/
-uint64_t sdbm( char *str )
-{
-    uint64_t hash = 0;
-    int c;
-
-    while ( ( c = *str++ ) != 0x00 )
-        hash = c + (hash << 6) + (hash << 16) - hash;
-
-    return hash;
-}
-

@@ -1,6 +1,21 @@
 #include "pdfmanip.h"
+#include "pdfmanip_dictionary.h"
 
 //static pdfm_o *new_pdfmo();
+
+const char *object_type_names[] = {
+                                        [PDFM_NUMBER]      = "Number",
+                                        [PDFM_IR]          = "Indirect Reference",
+                                        [PDFM_NAME]        = "Name",
+                                        [PDFM_DICTIONARY]  = "Dictionary",
+                                        [PDFM_ARRAY]       = "Array",
+                                        [PDFM_STRING]      = "String",
+                                        [PDFM_HEXSTRING]   = "Hex String",
+                                        [PDFM_STREAM]      = "Stream",
+                                        [PDFM_BOOLEAN]     = "Boolean",
+                                        [PDFM_NULL]        = "Null",
+                                        [PDFM_MAGICNUMBER] = "Magic Number",
+                                        0};
 
 static int pdfm_getsize( pdfm *pdf )
 {
@@ -24,15 +39,6 @@ static void pdfm_loadversion( pdfm *pdf )
     memcpy( pdf->version_string, pdf->raw_data, ( pch - pdf->raw_data ) );
 }
 
-/*
-static char *next_space( char *str )
-{
-   while( *str != '\0' && !isspace( *str ) )
-      str++;
-   return str;
-}
-*/
-
 static char *skip_spaces( char *str )
 {
    while( isspace( *str ) )
@@ -47,15 +53,6 @@ static char *skip_whitespace( char *str )
    return str;
 }
 
-/*
-static pdfm_o *load_object( char *str )
-{
-  pdfm_o *obj = NULL;
-
-  return obj;
-}
-*/
-
 static char *read_name( char *pch )
 {
     size_t len = strcspn( pch+1, "\n\r\\ \t/[<(" );//pch+1 because otherwise it will return 0 returning the / at the beginning of the name
@@ -67,26 +64,33 @@ static char *read_name( char *pch )
 static char *read_array( char *pch )
 {
     size_t len = 0;
-    while( pch[len] != ']' )
+    int level = 0;
+    do
+    {
+        if( pch[len] == '[' )
+            level++;
+        else if( pch[len] == ']' )
+            level--;
         len++;
-    len++;//get that closing ]
+    }while( level != 0 );
     char *array = calloc( len, sizeof( char ) );
     memcpy( array, pch, len );
+
     return array;
 }
 
-static LIST *read_dictionary( char *pch )
+static pdfm_d *read_dictionary( char *pch )
 {
-    LIST *dic = AllocList();
+   pdfm_d *dic = new_dictionary();
     while( *pch == '<' ) //should be 2-- << [data] >>
         pch++;
 
     pch = skip_whitespace( pch );
 
-    pdfm_d *entry;
+    pdfm_dentry *entry;
     while( *pch != '>' && pch[1] != '>' )
     {
-        entry = calloc( 1, sizeof( pdfm_d ) );
+        entry = calloc( 1, sizeof( pdfm_dentry ) );
         entry->label = read_name( pch );
         pch = skip_whitespace( pch );
         pch += strlen( entry->label );
@@ -147,7 +151,7 @@ static LIST *read_dictionary( char *pch )
             fprintf( stderr, "Malformed pdf." );
             abort();
         }
-        AppendToList( entry, dic );
+        dictionary_add( entry, dic );
         pch = skip_whitespace( pch );
     }
 
@@ -167,10 +171,73 @@ static int xref_cmp( const void *left, const void *right )
         return 1;
 }
 
+
+static int identify_object_types( pdfm *pdf )
+{
+    ITERATOR Iter;
+    pdfm_o *obj;
+    char *pos;
+    AttachIterator( &Iter, pdf->objects );
+    while( ( obj = NextInList( &Iter ) ) != NULL )
+    {
+        if( !strncmp( obj->raw_data, pdf->raw_data, 6 ) )//The first object is the magic number, lets skip that.
+        {
+            obj->type = PDFM_MAGICNUMBER;
+            continue;
+        }
+        pos = obj->raw_data+obj->size;
+        while( strncmp( pos, "endobj", 6 ) )
+            pos--;
+        pos--;//were at 'e', now at whatever's before "endobj"
+        while( pos != &obj->raw_data[0] && ( *pos == ' ' || *pos == '\t' || *pos == '\n' || *pos == '\r' ) )
+            pos--;
+        switch( *pos )
+        {
+            case '>':
+                {
+                    if( *(pos-1) == '>' )
+                        obj->type = PDFM_DICTIONARY;
+                    else
+                        obj->type = PDFM_HEXSTRING;
+                    break;
+                }
+            case ']':
+                {
+                    obj->type = PDFM_ARRAY;
+                    break;
+                }
+            case 'm':
+            case 'M':
+                {
+                    if( !strncmp( pos-8, "endstream", 8 ) )
+                        obj->type = PDFM_STREAM;
+                    else
+                        return PDFM_UNSPECIFIED;
+                    break;
+                }
+            case ')':
+                {
+                    obj->type = PDFM_STRING;
+                    break;
+                }
+            default:
+                {
+                    return PDFM_UNSPECIFIED;
+                    break;
+                }
+        }
+
+    }
+    DetachIterator( &Iter );
+
+
+    return PDFM_SUCCESS;
+}
+
 static int process_raw_pdf_data( pdfm *pdf )
 {
    char *pch = pdf->raw_data;
-   char *pos = pch + pdf->size;
+   pdf->pos = pch + pdf->size;
 
    if( pch[0] != '%' || pch[1] != 'P' || pch[2] != 'D' || pch[3] != 'F' ) //No pdf version number
       return PDFM_NOVERSION;
@@ -183,46 +250,76 @@ static int process_raw_pdf_data( pdfm *pdf )
    if( i == 0 ) //No EOF marker
       return PDFM_NOEOF;
 
-   while( strncmp( pos, "startxref", 9 ) ) //find the reference location of the xref table
-      pos--;
+   while( strncmp( pdf->pos, "startxref", 9 ) ) //find the reference location of the xref table
+      pdf->pos--;
 
-   pos += 9;//point to after 'startxref' in the file.
-   pdf->xref_location = strtoull( pos, NULL, 0 );
-   pos = pch + pdf->xref_location;
+   pdf->pos += 9;//point to after 'startxref' in the file.
+   pdf->xref_location = strtoull( pdf->pos, NULL, 0 );
+   pdf->pos = pch + pdf->xref_location;
 
-   if( strncmp( pos, "xref", 4 ) ) //xref table not found
+   if( strncmp( pdf->pos, "xref", 4 ) ) //xref table not found
       return PDFM_NOXREF;
 
-   pos += 5;
-   strtoul( pos, &pos, 0 );
-   pdf->xref_count = strtoull( pos, &pos, 0 );
+   pdf->pos += 5;
+   strtoul( pdf->pos, &pdf->pos, 0 );
+   pdf->xref_count = strtoull( pdf->pos, &pdf->pos, 0 );
 
    pdfm_xref *xref;
    for( i = 0; i < pdf->xref_count; i++ )
    {
        xref = calloc( 1, sizeof( pdfm_xref ) );
-       xref->offset = strtouint64_t( pos );
-       pos += 11;
-       xref->generation = strtouint64_t( pos );
-       pos += 7;
-       xref->status = *pos;
-       pos += 2;
+       xref->offset = strtouint64_t( pdf->pos );
+       pdf->pos += 11;
+       xref->generation = strtouint64_t( pdf->pos );
+       pdf->pos += 7;
+       xref->status = *pdf->pos;
+       pdf->pos += 2;
        AttachSorted( xref, pdf->xref_table, xref_cmp );
    }
-   pos++;
+   pdf->pos++;
 
-   pos = skip_spaces( pos );
-   if( strncmp( pos, "trailer", 7 ) )
+   pdf->pos = skip_spaces( pdf->pos );
+   if( strncmp( pdf->pos, "trailer", 7 ) )
    {
-      fprintf( stderr, "%s", pos );
+      fprintf( stderr, "%s", pdf->pos );
       return PDFM_NOTRAILER;
    }
-   pos += 7; //Skip 'trailer'
-   pos = skip_whitespace( pos );//in case there are any extra spaces
-    pdf->trailer = read_dictionary( pos );
+   pdf->pos += 7; //Skip 'trailer'
+   pdf->pos = skip_whitespace( pdf->pos );//in case there are any extra spaces
+    pdf->trailer = read_dictionary( pdf->pos );
    if( pdf->trailer == NULL )
        return PDFM_UNSPECIFIED;
 
+   ITERATOR Iter;
+   pdfm_xref *next;
+   pdfm_o *obj;
+   AttachIterator( &Iter, pdf->xref_table );
+   while( ( xref = NextInList( &Iter ) ) != NULL )
+   {
+       obj = calloc( 1, sizeof( pdfm_o ) );
+       next = peekNextInList( &Iter );
+       if( next == NULL )
+       {
+           size_t p = pdf->size;//Point to the last byte in the file
+           while( strncmp( &pdf->raw_data[p], "endobj", 6 ) ) //Find the end of the last object
+               p--;
+           obj->size = p - xref->offset + 6;//Add the 'endobj' marker back on
+       }
+       else
+           obj->size = next->offset - xref->offset;
+       obj->raw_data = calloc( obj->size, sizeof( char ) );
+       obj->offset = xref->offset;
+       memcpy( obj->raw_data, pdf->raw_data+xref->offset, obj->size );
+
+       AppendToList( obj, pdf->objects );
+
+   }
+   DetachIterator( &Iter );
+
+   //Process all the objects...
+   int ret = identify_object_types( pdf );
+   if( ret != PDFM_SUCCESS )
+       return ret;
 
    return 0;
 }
