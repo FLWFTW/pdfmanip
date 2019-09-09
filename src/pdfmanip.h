@@ -43,7 +43,7 @@ pdfm_error pdfm_error_code;
 #define DLM_SD    0x2F
 #define DLM_PC    0x25
 
-enum e_pdfmanip_otype { PDFM_NUMBER, PDFM_IR, PDFM_NAME, PDFM_DICTIONARY, PDFM_ARRAY, PDFM_STRING, PDFM_HEXSTRING, PDFM_STREAM, PDFM_BOOLEAN, PDFM_NULL, PDFM_MAGICNUMBER };
+enum e_pdfmanip_otype { PDFM_UNKNOWN = 0, PDFM_REAL, PDFM_INTEGER, PDFM_IR, PDFM_NAME, PDFM_DICTIONARY, PDFM_ARRAY, PDFM_STRING, PDFM_HEXSTRING, PDFM_STREAM, PDFM_BOOLEAN, PDFM_NULL, PDFM_MAGICNUMBER };
 
 struct s_pdfmanip
 {
@@ -88,6 +88,11 @@ struct s_pdfmanip_dictionary
    LIST        * list;
 };
 
+struct s_pdfmanip_boolean
+{
+   bool          value;
+};
+
 struct s_pdfmanip_object
 {
    uint64_t      object_number;
@@ -97,7 +102,7 @@ struct s_pdfmanip_object
    char          status;
    pdfm_otype    type;
    char        * raw_data;
-   LIST        * contents;
+   void        * contents;
 };
 
 pdfm *load_pdf( char *filename );

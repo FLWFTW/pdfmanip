@@ -255,7 +255,7 @@ void AttachSorted( void *pContent, LIST *pList, int (*cmp)(const void *, const v
 
         if (pCell->_pContent == pContent)
         {
-            //Do not attach if its already in the list
+            /*Do not attach if its already in the list*/
             return;
         }
 
@@ -265,9 +265,9 @@ void AttachSorted( void *pContent, LIST *pList, int (*cmp)(const void *, const v
 
     nCell = AllocCell();
     nCell->_pContent = pContent;
-    if( pCell )//Not inserting at the very end of the list
+    if( pCell )/*Not inserting at the very end of the list*/
     {
-        if( pList->_pFirstCell == pCell ) //We're inserting at the very beginning of the list
+        if( pList->_pFirstCell == pCell ) /*We're inserting at the very beginning of the list*/
         {
             nCell->_pNextCell = pList->_pFirstCell;
 
@@ -279,7 +279,7 @@ void AttachSorted( void *pContent, LIST *pList, int (*cmp)(const void *, const v
 
             pList->_pFirstCell = nCell;
         }
-        else//Inserting somewhere in the middle of the list
+        else/*Inserting somewhere in the middle of the list*/
         {
             nCell->_pPrevCell = pCell->_pPrevCell;
             pCell->_pPrevCell = nCell;
@@ -287,7 +287,7 @@ void AttachSorted( void *pContent, LIST *pList, int (*cmp)(const void *, const v
             nCell->_pPrevCell->_pNextCell = nCell;
         }
     }
-    else //Appending to the end of the list.
+    else /*Appending to the end of the list.*/
     {
        nCell->_pPrevCell = pList->_pLastCell;
        if( pList->_pLastCell )
@@ -315,7 +315,7 @@ void AppendToList( void *pContent, LIST *pList )
 
       if (pCell->_pContent == pContent)
       {
-         //Do not attach if its already in the list
+         /*Do not attach if its already in the list*/
          return;
       }
    }

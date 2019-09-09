@@ -61,7 +61,7 @@ bool hash_add( void *content, char *key, hash_table *table )
    unsigned long hash = sdbm( key );
    hash %= MAX_BUCKETS;
    hash_bucket *bucket;
-   if( table->size >= MAX_BUCKETS ) //Hash table is full
+   if( table->size >= MAX_BUCKETS ) /*Hash table is full*/
       return false;
    while( ( bucket = table->buckets[hash] ) != NULL && hash < MAX_BUCKETS )
    {
@@ -71,7 +71,7 @@ bool hash_add( void *content, char *key, hash_table *table )
          hash = (hash + 1 ) % MAX_BUCKETS;
    }
 
-   if( bucket == NULL )//new
+   if( bucket == NULL )/*new*/
    {
       bucket = calloc( 1, sizeof( hash_bucket ) );
       bucket->key = strdup( key );

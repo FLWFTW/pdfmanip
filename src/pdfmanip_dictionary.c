@@ -21,14 +21,14 @@ void dictionary_add( pdfm_dentry *entry, pdfm_d *d )
    hash_add( entry, entry->label, d->table );
    ITERATOR Iter;
    AttachIterator( &Iter, d->list );
-   char *str; //See if this is a repeat/update of a hash table entry. If it is we don't need to
-              //re-add the key to the key list.
+   char *str; /*See if this is a repeat/update of a hash table entry. If it is we don't need to
+              re-add the key to the key list.*/
    while( ( str = NextInList( &Iter ) ) != NULL )
    {
       if( !strcmp( str, entry->label ) )
          break;
    }
-   if( !str ) //Key doesn't exist in key list, so we add it to the key list.
+   if( !str ) /*Key doesn't exist in key list, so we add it to the key list.*/
       AppendToList( entry->label, d->list );
    return;
 }
@@ -54,4 +54,5 @@ void dictionary_del( char *key, pdfm_d *d )
    }
    DetachIterator( &Iter );
    DetachFromList( str, d->list );
+   free( str );
 }

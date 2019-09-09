@@ -31,8 +31,25 @@ char *strdup( char *orig )
         ret[len] = orig[len];
         len--;
     }while( len > 0 );
-    ret[0] = orig[0];//probably a more eloquent way of copying that first byte, but this works.
+    ret[0] = orig[0];/*probably a more eloquent way of copying that first byte, but this works.*/
 
     return ret;
 }
 
+int strincmp( char *s1, char *s2, size_t n )
+{
+    while ( n && *s1 && ( toupper(*s1) == toupper(*s2) ) )
+    {
+        ++s1;
+        ++s2;
+        --n;
+    }
+    if ( n == 0 )
+    {
+        return 0;
+    }
+    else
+    {
+        return ( *(unsigned char *)(s1) - *(unsigned char *)(s2) );
+    }
+}
